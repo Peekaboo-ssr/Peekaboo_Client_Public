@@ -59,9 +59,6 @@ public class UI_EXIT : MonoBehaviour
     {
         Reset();
 
-        int totalPlayerNum = RemoteManager.Instance.PlayerDictionary.Count + 1;
-        int alivePlayerNum = GetAlivePlayerNum();
-
         mainBg.gameObject.SetActive(true);
         SoundManager.Instance.PlayInGameSfx(EInGameSfx.ExitPanel, GameManager.Instance.Player.transform.position);
         yield return waitForSeconds;
@@ -75,7 +72,7 @@ public class UI_EXIT : MonoBehaviour
         yield return waitForSeconds;
 
         borderAlivePlayerNums.gameObject.SetActive(true);
-        TXT_AlivePlayerNums.text = $"{alivePlayerNum} / {totalPlayerNum}";
+        TXT_AlivePlayerNums.text = $"{GameManager.Instance.AlivePlayerNum} / {GameManager.Instance.AlivePlayerNum + GameManager.Instance.DiedPlayerNum}";
         SoundManager.Instance.PlayInGameSfx(EInGameSfx.ExitPanel, GameManager.Instance.Player.transform.position);
         yield return waitForSeconds;
 

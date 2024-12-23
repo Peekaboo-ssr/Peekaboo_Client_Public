@@ -11,12 +11,6 @@ public class GhostTriggerAttackState : GhostAttackState
     protected override void PerformAttack()
     {
         base.PerformAttack();
-        if (_ghost.IsTest)
-        {
-            OnPlayerNotDetected();
-            return;
-        }
-
         LocalPlayer localPlayer = _ghost.Target as LocalPlayer;
         RemotePlayer remotePlayer = _ghost.Target as RemotePlayer;
         if (localPlayer != null)

@@ -41,8 +41,8 @@ public class RemoteManager : Singleton<RemoteManager>
         await UniTask.WaitForSeconds(5f);
         foreach (var remotePlayer in PlayerDictionary)
         {
-            remotePlayer.Value.OffSpectate();
             remotePlayer.Value.gameObject.SetActive(true);
+            remotePlayer.Value.OffSpectate();
             remotePlayer.Value.Rigidbody.MovePosition(pos);
             remotePlayer.Value.IsDie = false;
         }
@@ -89,7 +89,7 @@ public class RemoteManager : Singleton<RemoteManager>
     }
     public void UpdateRemotePlayerState(string id, CharacterState state)
     {
-        if (id == NetworkManager.Instance.UserId && GameManager.Instance.Player.gameObject.activeSelf)
+        if (id == NetworkManager.Instance.UserId && GameManager.Instance.Player.gameObject.activeInHierarchy)
         {
             GameManager.Instance.Player.NetworkHandler.StateChangeSync(state);
             return;
@@ -97,19 +97,31 @@ public class RemoteManager : Singleton<RemoteManager>
 
         if(!PlayerDictionary.ContainsKey(id)) return;
 
-        if (PlayerDictionary[id].gameObject.activeSelf) // 현재 살아있는 경우에만 State 동기화
-            PlayerDictionary[id].NetworkHandler.StateSync(state);
-
-        if(state == CharacterState.Died)
+        if (state == CharacterState.Died)
         {
             PlayerDictionary[id].IsDie = true;
             OnPlayerDie?.Invoke(id);
-        }          
+        }
+
+        if (state == CharacterState.Exit || PlayerDictionary[id].gameObject.activeInHierarchy) // 현재 살아있는 경우에만 State 동기화
+        {
+            try
+            {
+                PlayerDictionary[id].NetworkHandler.StateSync(state);
+            }
+            catch (Exception)
+            {
+                Debug.LogError($"{state} State Change Notification 오류 발생");
+                throw;
+            }
+        }
     }
+
     public void BlockInteractionPlayer()
     {
         GameManager.Instance.Player.NetworkHandler.BlockInteraction();
     }
+
     public void DisconnectPlayer(string id)
     {
         RemotePlayer deletePlayer = PlayerDictionary[id];
@@ -133,6 +145,7 @@ public class RemoteManager : Singleton<RemoteManager>
             ghost.Init(ghostInfo.GhostId, false);
         else
             ghost.Init(ghostInfo.GhostId, true);
+
 
         //ghost.Init(false, ghostId);
         if (!ghostDictionary.ContainsKey(ghostInfo.GhostId))

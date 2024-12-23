@@ -80,14 +80,6 @@ public partial class LocalPlayer : Player
         gameObject.SetActive(false);
     }
 
-    #region ContextMenu
-    [ContextMenu("Die")]
-    public void b()
-    {
-        StatHandler.TakeDamageRequest(1005);
-    }
-    #endregion
-
     #region Jump
     private void StartCheckJumpCoolDown()
     {

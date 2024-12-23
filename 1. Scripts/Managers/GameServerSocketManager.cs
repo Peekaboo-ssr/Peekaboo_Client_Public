@@ -16,12 +16,16 @@ public class GameServerSocketManager : TCPSocketManagerBase<GameServerSocketMana
     public event Action OnMainSceneLoad;
     public event Action OnGameStart;
 
+    private void Start()
+    {
+        Init(ip, port);
+    }
+
     public void ConnectGameServer()
     {
         IsInStage = false;
         ip = NetworkManager.Instance.GameServerIP;
         port = 6000;
-        Init(ip, port);
         Connect();
     }
     public void CallMainSceneLoad()
@@ -338,7 +342,7 @@ public class GameServerSocketManager : TCPSocketManagerBase<GameServerSocketMana
         // current SoulCredit
         RemoteManager.Instance.isFailSesstion = false;
         IsInStage = false;
-        GameManager.Instance.CallNextDay(response.StartPosition.ToVector3(), response.RemainingDay);
+        GameManager.Instance.CallNextDay(response.StartPosition.ToVector3(), response.RemainingDay, response.DiedCount, response.AliveCount);
         UIManager.Instance.UI_HUD.UI_SoulCredit.UpdateCreditText((int)response.SoulCredit);
     }
     public void SubmissionEndNotification(GamePacket gamePacket)

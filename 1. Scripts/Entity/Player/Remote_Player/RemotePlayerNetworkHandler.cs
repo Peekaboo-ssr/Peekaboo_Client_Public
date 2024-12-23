@@ -106,6 +106,9 @@ public class RemotePlayerNetworkHandler : MonoBehaviour
         // SetBool Anim - 실행 전 기존 애니메이션 Stop 후 진행 / Trigger - 상관 X
         switch(state)
         {
+            default:
+                Debug.LogError($"정의되지 않은 State Change Notification 발생");
+                break;
             case CharacterState.Idle:
                 SetBoolAnimState(player.AnimationData.IdleParameterHash, player.AnimationData.IdleParameterHash);
                 player.StopFootStepSound();
@@ -130,7 +133,6 @@ public class RemotePlayerNetworkHandler : MonoBehaviour
                 break;
             case CharacterState.Died:
                 player.EventHandler.CallDieEvent(player);
-                player.AnimationHandler.StartAnimTrigger(player.AnimationData.DieParameterHash, player);
                 break;
             case CharacterState.Exit:
                 GameManager.Instance.CanRestartGame = true;

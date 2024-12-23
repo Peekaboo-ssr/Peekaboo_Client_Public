@@ -2,12 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class GhostC : Ghost
 {
     public bool IsSeePlayer;
 
     private WaitForSeconds checkDistanceTime = new WaitForSeconds(0.1f);
+    private UnityAction OnDistanceTarget;
     public override void Init(uint ghostId, bool isFail)
     {
         base.Init(ghostId, isFail);
@@ -31,6 +33,7 @@ public class GhostC : Ghost
                 StateMachine.ChangeState(StateMachine.FailSeeionState);
             }
         }
+        OnDistanceTarget += () => Animator.speed = 1;
     }
 
     #region 귀신 처다보기 처리
@@ -62,8 +65,11 @@ public class GhostC : Ghost
     public void NotSeeGhost()
     {
         Animator.speed = 0;
-        if (NetworkManager.Instance.IsHost) Agent.isStopped = true;
-        StartCoroutine(CheckDistanceCoroutine());
+        if (NetworkManager.Instance.IsHost)
+        {
+            Agent.isStopped = true;
+            StartCoroutine(CheckDistanceCoroutine());
+        }
     }
 
     private IEnumerator CheckDistanceCoroutine()
@@ -71,13 +77,15 @@ public class GhostC : Ghost
         while (true)
         {
             if(Target == null || !Target.gameObject.activeInHierarchy)
-            {         
+            {
+                OnDistanceTarget?.Invoke();
                 ChangePatrol();
                 break;
             }
 
             float distance = Vector3.Distance(transform.position, Target.transform.position);
             if (distance > Target.PlayerSO.Sight){
+                OnDistanceTarget?.Invoke();
                 ChangePatrol();
                 break;
             }
@@ -86,10 +94,9 @@ public class GhostC : Ghost
     }
 
     private void ChangePatrol()
-    {
-        Animator.speed = 1;
-        if (NetworkManager.Instance.IsHost) Agent.isStopped = false;
-        StateMachine.MoveState.OnPlayerNotDetected();
+    {      
+        Agent.isStopped = false;
+        OnPlayerNotDetected();
         StateMachine.ChangeState(StateMachine.PatrolState);
     }
     #endregion

@@ -44,7 +44,7 @@ public class RemotePlayer : Player
     protected override void PlayerDie(Player player)
     {
         base.PlayerDie(player);
-
         OffSpectate();
+        player.AnimationHandler.StartAnimTrigger(player.AnimationData.DieParameterHash, player);
     }
 }

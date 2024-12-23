@@ -16,7 +16,7 @@ public class GhostIdleState : EntityBaseState
     public override void Enter()
     {
         base.Enter();
-        _ghost.StateMachine.AttackState.OnPlayerNotDetected();
+        _ghost.OnPlayerNotDetected();
         _ghost.NetworkHandler.StateChangeRequest(CharacterState.Idle);
         IdleTimer = _ghost.StatHandler.CurStat.AttackSuccessWaitingTime;
         _lastTime = Time.time;

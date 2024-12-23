@@ -42,7 +42,7 @@ public class GhostAttackState : GhostBaseState
         {
             if (!_ghost.Target.gameObject.activeInHierarchy)
             {
-                OnPlayerNotDetected();
+                _ghost.OnPlayerNotDetected();
                 _ghost.StateMachine.ChangeState(_ghost.StateMachine.PatrolState);
             }
             _isAttacking = true;

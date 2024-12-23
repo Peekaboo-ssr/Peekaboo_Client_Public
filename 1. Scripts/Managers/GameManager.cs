@@ -1,6 +1,5 @@
 using Cysharp.Threading.Tasks;
 using System;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class GameManager : Singleton<GameManager>
@@ -14,15 +13,21 @@ public class GameManager : Singleton<GameManager>
 
     public bool CanRestartGame = false;
     public uint RemainingDay;
+    public uint DiedPlayerNum;
+    public uint AlivePlayerNum;
 
     private void Start()
     {
         isStart = false;
+        Application.targetFrameRate = 144;
     }
 
-    public async void CallNextDay(Vector3 pos, uint remainDay)
+    public async void CallNextDay(Vector3 pos, uint remainDay, uint diedPlayerNum, uint alivePlayerNum)
     {
         RemainingDay = remainDay;
+        DiedPlayerNum = diedPlayerNum;
+        AlivePlayerNum = alivePlayerNum;
+
         await UniTask.WaitUntil(() => (CanRestartGame));
 
         // Exit UI 

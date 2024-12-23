@@ -74,28 +74,5 @@ public class GhostEventHandler : MonoBehaviour
     {
         OnNotSeeEvent?.Invoke(player);
     }
-
-    public void PlayAppearSound(EGhostType ghostType)
-    {
-        switch (ghostType)
-        {
-            case EGhostType.A:
-                SoundManager.Instance.PlayInGameSfx(EInGameSfx.GhostAppearA, transform.position);
-                break;
-            case EGhostType.B:
-                SoundManager.Instance.PlayInGameSfx(EInGameSfx.GhostAppearB, transform.position);
-                break;
-            case EGhostType.C:
-                SoundManager.Instance.PlayInGameSfx(EInGameSfx.GhostAppearC, transform.position);
-                break;
-            case EGhostType.D:
-                SoundManager.Instance.PlayInGameSfx(EInGameSfx.GhostAppearD, transform.position);
-                break;
-            case EGhostType.E:
-                SoundManager.Instance.PlayInGameSfx(EInGameSfx.GhostAppearE, transform.position);
-                break;
-        }
-        
-    }
     #endregion
 }

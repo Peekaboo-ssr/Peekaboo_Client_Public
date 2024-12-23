@@ -8,7 +8,11 @@ public class EntityStateMachine
     public IState BeforeState;
 
     public void ChangeState(IState state)
-    {       
+    {
+        if (Entity as GhostA != null)
+        {
+            UnityEngine.Debug.Log($"Ghost{(Entity as GhostA).GhostId}의 현재 State: {state.GetType().Name}");
+        }
         BeforeState = CurrentState;
         CurrentState?.Exit();
         CurrentState = state;

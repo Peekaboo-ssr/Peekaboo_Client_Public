@@ -67,13 +67,6 @@ public class GhostBaseState : EntityBaseState
         _ghost.Target = hit.GetComponent<Player>();
     }
 
-    public void OnPlayerNotDetected()
-    {
-        _ghost.IsPlayerInRange = false;
-        _ghost.Target = null;
-        _ghost.TargetCollider = null;
-    }
-
     protected void SetDestination(Vector3 destination)
     {
         Vector3 nearestPos = GetNearestNavMeshPos(destination);
@@ -123,8 +116,11 @@ public class GhostBaseState : EntityBaseState
         if (_ghost.StateMachine.CurrentState != curState) return;
         if (!IsPlayerWithinAttackRange())
         {
-            Debug.Log($"Ghost {_ghost.name}의 타겟 : {_ghost.Target.name}");
-            SetDestination(_ghost.Target.transform.position);
+            if (!_ghost.IsReturnMove)
+            {
+                Debug.Log($"Ghost {_ghost.name}의 타겟 : {_ghost.Target.name}");
+                SetDestination(_ghost.Target.transform.position);
+            }
         }
         else
         {

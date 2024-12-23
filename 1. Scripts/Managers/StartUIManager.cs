@@ -19,4 +19,9 @@ public class StartUIManager : Singleton<StartUIManager>
         else
             mainPanelManager.OpenPanel(UI_LOGIN_STRING);
     }
+    [ContextMenu("TEST")]
+    public void Test()
+    {
+        mainPanelManager.OpenPanel(UI_HOME_STRING);
+    }
 }

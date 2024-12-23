@@ -190,12 +190,13 @@ public class Door : MonoBehaviour
         switch (doorState)
         {
             case DoorState.DoorLeft:
-            case DoorState.DoorRight:
-                SoundManager.Instance.PlayInGameSfx(EInGameSfx.DoorClose, transform.position);
-                break;
-
-            case DoorState.DoorMiddle:
                 SoundManager.Instance.PlayInGameSfx(EInGameSfx.DoorOpen, transform.position);
+                break;
+            case DoorState.DoorRight:
+                SoundManager.Instance.PlayInGameSfx(EInGameSfx.DoorOpen, transform.position);
+                break;
+            case DoorState.DoorMiddle:
+                SoundManager.Instance.PlayInGameSfx(EInGameSfx.DoorClose, transform.position);
                 break;
         }
     }

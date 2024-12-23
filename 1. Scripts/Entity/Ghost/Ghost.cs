@@ -23,15 +23,36 @@ public class Ghost : Entity
     public Player Target { get; set; }
     public Collider TargetCollider { get; set; }
     public Door FindDoor { get; set; }
-    public bool IsAttackReached { get; set; }                     // 공격이 닿였는지
-    public bool IsPlayerInRange { get; set; }       // 플레이어 거리 감지 여부
+    public bool IsAttackReached { get; set; }
+    public bool IsPlayerInRange { get; set; } 
     public bool IsDoneAttackAnim { get; set; }
-    public bool IsOpeningDoor { get; set; }         // 문 열기 중인지
+    public bool IsOpeningDoor { get; set; } 
+    public bool IsReturnMove { get; set; }
     #endregion
 
     private void Start()
     {
         if (IsTest) Init(GhostId, false);
+        if (NetworkManager.Instance.IsHost)
+        {
+            GameManager.Instance.Player.EventHandler.OnDieEvent += HandlePlayerDie;
+            foreach (var remotePlayer in RemoteManager.Instance.PlayerDictionary.Values)
+            {
+                remotePlayer.EventHandler.OnDieEvent += HandlePlayerDie;
+            }
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (NetworkManager.Instance.IsHost)
+        {
+            GameManager.Instance.Player.EventHandler.OnDieEvent -= HandlePlayerDie;
+            foreach (var remotePlayer in RemoteManager.Instance.PlayerDictionary.Values)
+            {
+                remotePlayer.EventHandler.OnDieEvent -= HandlePlayerDie;
+            }
+        }
     }
 
     /// <summary>
@@ -41,12 +62,6 @@ public class Ghost : Entity
     public virtual void Init(uint ghostId, bool isFail)
     {
         GhostId = ghostId;
-
-        GameManager.Instance.Player.EventHandler.OnDieEvent += HandlePlayerDie;
-        foreach(var remotePlayer in RemoteManager.Instance.PlayerDictionary.Values)
-        {
-            remotePlayer.EventHandler.OnDieEvent += HandlePlayerDie;
-        }
 
         // 네트워크 핸들러 초기화
         NetworkHandler = GetComponent<GhostNetworkHandler>();
@@ -69,17 +84,20 @@ public class Ghost : Entity
 
             EventHandler = GetComponent<GhostEventHandler>();
             EventHandler.Init(this);
-        }
+        }   
     }
 
     private void HandlePlayerDie(Player player)
     {
+        if (this == null || gameObject == null || !gameObject.activeInHierarchy) return;
+        if (Target == null) return;
         if (Target.gameObject != player.gameObject) return;
         if (IsTargetDieFromMe()) return;
+
         Animator.speed = 1;
         if (NetworkManager.Instance.IsHost) Agent.isStopped = false;
-        StateMachine.PatrolState.OnPlayerNotDetected();
-        if(GhostType != EGhostType.E)
+        OnPlayerNotDetected();
+        if (GhostType != EGhostType.E)
             StateMachine.ChangeState(StateMachine.PatrolState);
     }
 
@@ -136,12 +154,46 @@ public class Ghost : Entity
         #endregion
     }
 
+    private void OnCollisionEnter(Collision collision)
+    {
+        int ghostLayer = LayerMask.NameToLayer("Ghost");
+        if (collision.gameObject.layer == ghostLayer)
+        {
+            IsReturnMove = true;
+            StartCoroutine(MoveBackwardAndReturn(Agent.destination));
+        }
+    }
+
+    private IEnumerator MoveBackwardAndReturn(Vector3 originDestination)
+    {
+        // 뒤로 이동
+        Vector3 backwardPosition = transform.position - transform.forward * 1.5f;
+        Agent.SetDestination(backwardPosition);
+
+        // 에이전트가 뒤로 이동한 위치에 도달할 때까지 대기
+        while (Agent.pathPending || Agent.remainingDistance > 0.1f)
+        {
+            yield return null; // 다음 프레임까지 대기
+        }
+
+        // 기존 목표로 이동
+        Agent.SetDestination(originDestination);
+        IsReturnMove = false;
+    }
+
     /// <summary>
     /// 공격 애니메이션 끝날 지점에서 Attack처리
     /// </summary>
     public void DoneAttackAnim()
     {
         IsDoneAttackAnim = true;
+    }
+
+    public void OnPlayerNotDetected()
+    {
+        IsPlayerInRange = false;
+        Target = null;
+        TargetCollider = null;
     }
 
     #region Sound
@@ -154,6 +206,29 @@ public class Ghost : Entity
     public void PlaySfxFootStepRight()
     {
         SoundManager.Instance.PlayInGameSfx(EInGameSfx.GhostFootStepRight, transform.position);
+    }
+
+    public void PlayAppearSound(EGhostType ghostType)
+    {
+        switch (ghostType)
+        {
+            case EGhostType.A:
+                SoundManager.Instance.PlayInGameSfx(EInGameSfx.GhostAppearA, transform.position);
+                break;
+            case EGhostType.B:
+                SoundManager.Instance.PlayInGameSfx(EInGameSfx.GhostAppearB, transform.position);
+                break;
+            case EGhostType.C:
+                SoundManager.Instance.PlayInGameSfx(EInGameSfx.GhostAppearC, transform.position);
+                break;
+            case EGhostType.D:
+                SoundManager.Instance.PlayInGameSfx(EInGameSfx.GhostAppearD, transform.position);
+                break;
+            case EGhostType.E:
+                SoundManager.Instance.PlayInGameSfx(EInGameSfx.GhostAppearE, transform.position);
+                break;
+        }
+
     }
     #endregion
 
@@ -212,8 +287,9 @@ public class Ghost : Entity
 
         // 디버깅 텍스트
         Gizmos.color = Color.white;
+#if UNITY_EDITOR
         UnityEditor.Handles.Label(ghostPosition + Vector3.up * 2, $"Sight Range: {sightRange:F2}, Sight Angle: {HORIZONTAL_FOV:F2}");
-
+#endif
         if (Agent == null || !Agent.hasPath) return;
 
         // 기즈모 색 설정

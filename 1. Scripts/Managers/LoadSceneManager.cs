@@ -17,9 +17,9 @@ public class LoadSceneManager : Singleton<LoadSceneManager>
     {
         nextScene = mainSceneName;
         SceneManager.LoadScene(loadSceneName);
-        
         await UniTask.WaitUntil(() => GameServerSocketManager.Instance.IsRoomReady);
         Debug.Log("LoadMainScene : RoomReady");
+        GameServerSocketManager.Instance.IsLoading = true;
         await OnLoadMainSceneAsync();
         Debug.Log("LoadMainScene : SceneReady");
         await UniTask.WaitUntil(() => GameManager.Instance.Player != null);
@@ -28,6 +28,7 @@ public class LoadSceneManager : Singleton<LoadSceneManager>
         Debug.Log("LoadMainScene : VivoxReady");
         await UniTask.WaitUntil(() => RemoteManager.Instance != null);
         Debug.Log("LoadMainScene : RemoteReady");
+        GameServerSocketManager.Instance.IsLoading = false;
         onComplete?.Invoke();
     }
     private async UniTask OnLoadMainSceneAsync()
@@ -66,7 +67,6 @@ public class LoadSceneManager : Singleton<LoadSceneManager>
             }
         }
     }
-
     public async UniTask LoadStartScene()
     {
         nextScene = startSceneName;

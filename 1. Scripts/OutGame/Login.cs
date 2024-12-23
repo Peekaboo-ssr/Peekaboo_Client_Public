@@ -63,22 +63,29 @@ public class Login : MonoBehaviour
     {
         // 텍스트 변경
         // ButtonComponent Off
-        GameServerSocketManager.Instance.ConnectGameServer();
-        await UniTask.WaitUntil(() => GameServerSocketManager.Instance.isConnected);
-        Debug.Log("LoginProcess : 서버 연결...");
-        await VivoxManager.Instance.LoginAsync(NetworkManager.Instance.UserId);
-        Debug.Log("LoginProcess : VivoxLogin...");
-        GameServerSocketManager.Instance.LoginInProgress = true;
-        GamePacket packet = new GamePacket();   
-        packet.LoginRequest = new C2S_LoginRequest();
-        packet.LoginRequest.Id = id;
-        packet.LoginRequest.Password = pw;
-        GameServerSocketManager.Instance.Send(packet);
+        try
+        {
+            GameServerSocketManager.Instance.ConnectGameServer();
+            await UniTask.WaitUntil(() => GameServerSocketManager.Instance.isConnected);
+            Debug.Log("LoginProcess : 서버 연결...");
+            await VivoxManager.Instance.LoginAsync(NetworkManager.Instance.UserId);
+            Debug.Log("LoginProcess : VivoxLogin...");
+            GameServerSocketManager.Instance.LoginInProgress = true;
+            GamePacket packet = new GamePacket();
+            packet.LoginRequest = new C2S_LoginRequest();
+            packet.LoginRequest.Id = id;
+            packet.LoginRequest.Password = pw;
+            GameServerSocketManager.Instance.Send(packet);
 
-        // TODO : 로그인 시도 중 팝업 Msg 출력
-        // 로그인 시도 중일 때만 Response의 값을 체크
-        await UniTask.WaitUntil(() => GameServerSocketManager.Instance.IsResponse == true);
-        GameServerSocketManager.Instance.IsResponse = false;
+            // TODO : 로그인 시도 중 팝업 Msg 출력
+            // 로그인 시도 중일 때만 Response의 값을 체크
+            await UniTask.WaitUntil(() => GameServerSocketManager.Instance.IsResponse == true);
+            GameServerSocketManager.Instance.IsResponse = false;
+        }
+        catch(Exception ex) 
+        {
+            Debug.Log(ex);
+        }
     }
 
     public void BlockLoginButton()

@@ -1,9 +1,5 @@
 using System.Collections;
-using TMPro;
-using UnityEditor.Rendering;
-using UnityEditor.Splines;
 using UnityEngine;
-using UnityEngine.Rendering;
 
 public class GhostNetworkHandler : MonoBehaviour
 {

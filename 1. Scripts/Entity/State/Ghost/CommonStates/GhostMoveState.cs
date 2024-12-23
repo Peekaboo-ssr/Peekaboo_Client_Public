@@ -66,7 +66,7 @@ public class GhostMoveState : GhostBaseState
             }
             else
             {
-                OnPlayerNotDetected();
+                _ghost.OnPlayerNotDetected();
                 _ghost.StateMachine.ChangeState(_ghost.StateMachine.PatrolState);
             }          
         }        
@@ -79,7 +79,7 @@ public class GhostMoveState : GhostBaseState
     {
         if (HasReachedDestination())
         {
-            OnPlayerNotDetected();
+            _ghost.OnPlayerNotDetected();
             _ghost.StateMachine.ChangeState(_ghost.StateMachine.PatrolState);
         }
     }
