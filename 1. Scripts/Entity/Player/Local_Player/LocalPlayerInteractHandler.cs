@@ -21,10 +21,12 @@ public class LocalPlayerInteractHandler : MonoBehaviour
     [SerializeField] private LayerMask storeLayer;
     [SerializeField] private LayerMask extractLayer;
     [SerializeField] private LayerMask diffSelectorLayer;
+    [SerializeField] private LayerMask playerLayer;
     [SerializeField] private float rayCheckDistance;
     [SerializeField] private float rayCheckDuration;
 
     private Item item;
+    private RemotePlayer remotePlayer;
     private Coroutine checkRayCoroutine;
     private WaitForSeconds rayCheckWaitForSeconds;
 
@@ -149,6 +151,16 @@ public class LocalPlayerInteractHandler : MonoBehaviour
                 UIManager.Instance.UI_HUD.UI_PlayerInteract.ShowInteractText("Select Diff (E)");
                 CanInteractDiffSelector = true;
             }
+            // 플레이어 닉네임
+            else if (Physics.Raycast(ray, out hit, rayCheckDistance) && ExtensionMethods.IsSameLayer(playerLayer, hit.collider.gameObject.layer))
+            {
+                if (hit.collider.gameObject != CurInteractObj)
+                {
+                    CurInteractObj = hit.collider.gameObject;
+                    remotePlayer = hit.collider.GetComponent<RemotePlayer>();
+                }
+                remotePlayer.NicknameHandler.StartNicknameCo();
+            }
             else
             {
                 UIManager.Instance.UI_HUD.UI_PlayerInteract.HideInteractText();
@@ -158,6 +170,11 @@ public class LocalPlayerInteractHandler : MonoBehaviour
                 CanInteractStore = false;
                 CanInteractExtract = false;
                 CanInteractDiffSelector = false;
+
+                if(remotePlayer != null)
+                {
+                    remotePlayer.NicknameHandler.StopNicknameCo();
+                }
             }
             yield return rayCheckWaitForSeconds;
         }

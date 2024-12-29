@@ -8,8 +8,12 @@ public class UI_PlayerStamina : MonoBehaviour
 
     private void Start()
     {
-        Init();
         GameManager.Instance.Player.StatHandler.OnStaminaChangeEvent += UpdateStaminaBar;
+    }
+
+    private void OnEnable()
+    {
+        Init();
     }
 
     private void Init()
@@ -19,7 +23,6 @@ public class UI_PlayerStamina : MonoBehaviour
 
     private void UpdateStaminaBar(float percentage) 
     {
-        //fillImage.fillAmount = percentage;
         DOTween.To(() => fillImage.fillAmount, x => fillImage.fillAmount = x, percentage, 0.5f);
     }
 }

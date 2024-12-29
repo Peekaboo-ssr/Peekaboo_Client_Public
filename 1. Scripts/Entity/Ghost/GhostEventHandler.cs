@@ -22,6 +22,7 @@ public class GhostEventHandler : MonoBehaviour
         {
             var participant = participantEntry.Value.Item1;
             var player = participantEntry.Value.Item2;
+            Debug.Log($"비복스 참여자 : {player.UserID}");
 
             SubscribeToSpeechDetection(participant, player);
         }
@@ -29,8 +30,9 @@ public class GhostEventHandler : MonoBehaviour
 
     private void SubscribeToSpeechDetection(VivoxParticipant participant, Player player)
     {
-        participant.ParticipantSpeechDetected += () =>
+        participant.ParticipantAudioEnergyChanged += () =>
         {
+            Debug.Log($"비복스 감지됨 : {player.UserID}, {participant.AudioEnergy}");
             if (participant.AudioEnergy >= 0.3f)
             {
                 OnSpeechDetected(player);
@@ -43,9 +45,8 @@ public class GhostEventHandler : MonoBehaviour
     /// </summary>
     /// <param name="participant"></param>
     private void OnSpeechDetected(Player player)
-    {
+    {      
         if (_ghost.Target != null) return;
-        if (player == null) return;
 
         float audibleDistance = VivoxManager.Instance.channel3DSetting.GetChannel3DProperties().AudibleDistance;
         float combinedDetection = _ghost.StatHandler.CurStat.Hearing + audibleDistance;

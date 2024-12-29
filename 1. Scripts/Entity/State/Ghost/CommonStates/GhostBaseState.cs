@@ -40,7 +40,7 @@ public class GhostBaseState : EntityBaseState
     {
         if (_ghost.Target == null)
         {
-            Collider hit = _ghost.FindEntityInSight(otherEntityLayer, _sight);
+            Collider hit = _ghost.FindClosestEntityInSight(otherEntityLayer, _sight);
             if (hit != null) OnPlayerDetected(hit);
         }
     }

@@ -17,6 +17,7 @@ public class GhostE : Ghost
             {
                 StateMachine = new GhostEStateMachine(this);
                 IsDefeatable = false;
+
                 StartBlinkRoutine();
             }
             else

@@ -1,28 +1,29 @@
 using System;
 using UnityEngine;
+using UnityEngine.AI;
 
 [Serializable]
 public class GhostStat
 {
-    public float Speed;                     // ÀÌµ¿ ¼Óµµ
-    public float AttackRange;               // °ø°İ ¹üÀ§
-    public float AttackCool;                // °ø°İ ÄğÅ¸ÀÓ
-    public float Sight;                     // ½Ã¾ß ¹İ°æ
-    public float SightAngle;                // ½Ã¾ß°¢
-    public float Hearing;                   // °ÔÀÓ ½ÃÀÛ ÈÄ ½ºÆù ½Ã°£
-    public float SpawnTime;                 // Ã»°¢ °¨Áö ¹üÀ§
-    public float AttackSuccessWaitingTime;  // °ø°İ ¼º°ø ÈÄ Idle Áö¼Ó ½Ã°£
+    public float Speed;                     // ì´ë™ ì†ë„
+    public float AttackRange;               // ê³µê²© ë²”ìœ„
+    public float AttackCool;                // ê³µê²© ì¿¨íƒ€ì„
+    public float Sight;                     // ì‹œì•¼ ë°˜ê²½
+    public float SightAngle;                // ì‹œì•¼ê°
+    public float Hearing;                   // ê²Œì„ ì‹œì‘ í›„ ìŠ¤í° ì‹œê°„
+    public float SpawnTime;                 // ì²­ê° ê°ì§€ ë²”ìœ„
+    public float AttackSuccessWaitingTime;  // ê³µê²© ì„±ê³µ í›„ Idle ì§€ì† ì‹œê°„
 }
 
 public class GhostStatHandler
 {
-    [SerializeField] public GhostStat BaseStat { get; private set; }    // ±âº» ½ºÅÈ
-    [SerializeField] public GhostStat CurStat { get; private set; } // ÇöÀç ½ºÅÈ
+    [SerializeField] public GhostStat BaseStat { get; private set; }    // ê¸°ë³¸ ìŠ¤íƒ¯
+    [SerializeField] public GhostStat CurStat { get; private set; } // í˜„ì¬ ìŠ¤íƒ¯
 
     /// <summary>
-    /// ScriptableObject¸¦ ±â¹İÀ¸·Î ½ºÅÈ ÃÊ±âÈ­
+    /// ScriptableObjectë¥¼ ê¸°ë°˜ìœ¼ë¡œ ìŠ¤íƒ¯ ì´ˆê¸°í™”
     /// </summary>
-    /// <param name="ghostSO">À¯·ÉÀÇ ScriptableObject</param>
+    /// <param name="ghostSO">ìœ ë ¹ì˜ ScriptableObject</param>
     public void Init(GhostBaseSO ghostSO)
     {
         BaseStat = new GhostStat();
@@ -33,7 +34,7 @@ public class GhostStatHandler
     }
 
     /// <summary>
-    /// ½ºÅÈ ÃÊ±â°ª ¼³Á¤
+    /// ìŠ¤íƒ¯ ì´ˆê¸°ê°’ ì„¤ì •
     /// </summary>
     private void InitStat(GhostStat stat, GhostBaseSO ghostSO)
     {
@@ -47,48 +48,13 @@ public class GhostStatHandler
         stat.AttackSuccessWaitingTime = ghostSO.AttackSuccessWaitingTime;
     }
 
-    /// <summary>
-    /// Æ¯Á¤ ½ºÅÈ ¼öÁ¤, ÇöÀç ½ºÅÈ °ªÀÌ¶û º¯°æÇÒ ½ºÅÈ °ªÀÌ¶û ´Ù¸¦ °æ¿ì º¯°æµÊ
-    /// </summary>
-    /// <param name="statModifier">º¯°æÇÒ ½ºÅÈ °ª</param>
-    public void UpdateStat(GhostStat statModifier)
+    public void ChangeRunSpeed()
     {
-        if (!Mathf.Approximately(CurStat.Speed, statModifier.Speed))
-            CurStat.Speed = statModifier.Speed;
-
-        if (!Mathf.Approximately(CurStat.AttackRange, statModifier.AttackRange))
-            CurStat.AttackRange = statModifier.AttackRange;
-
-        if (!Mathf.Approximately(CurStat.AttackCool, statModifier.AttackCool))
-            CurStat.AttackCool = statModifier.AttackCool;
-
-        if (!Mathf.Approximately(CurStat.Sight, statModifier.Sight))
-            CurStat.Sight = statModifier.Sight;
-
-        if (!Mathf.Approximately(CurStat.SightAngle, statModifier.SightAngle))
-            CurStat.SightAngle = Mathf.Clamp(statModifier.SightAngle, 0, 360);
-
-        if (!Mathf.Approximately(CurStat.Hearing, statModifier.Hearing))
-            CurStat.Hearing = statModifier.Hearing;
-
-        // °¢ ½ºÅÈÀÇ ÃÖ¼Ò°ª º¸Àå
-        CurStat.Speed = Mathf.Max(CurStat.Speed, 0);
-        CurStat.AttackRange = Mathf.Max(CurStat.AttackRange, 0);
-        CurStat.AttackCool = Mathf.Max(CurStat.AttackCool, 0);
-        CurStat.Sight = Mathf.Max(CurStat.Sight, 0);
-        CurStat.Hearing = Mathf.Max(CurStat.Hearing, 0);
+        CurStat.Speed = BaseStat.Speed + 0.4f;
     }
 
-    /// <summary>
-    /// ¸ğµç ½ºÅÈÀ» ±âº»°ªÀ¸·Î º¹¿ø
-    /// </summary>
-    public void ResetToBaseStat()
+    public void ChangeWalkSpeed()
     {
         CurStat.Speed = BaseStat.Speed;
-        CurStat.AttackRange = BaseStat.AttackRange;
-        CurStat.AttackCool = BaseStat.AttackCool;
-        CurStat.Sight = BaseStat.Sight;
-        CurStat.SightAngle = BaseStat.SightAngle;
-        CurStat.Hearing = BaseStat.Hearing;
     }
 }

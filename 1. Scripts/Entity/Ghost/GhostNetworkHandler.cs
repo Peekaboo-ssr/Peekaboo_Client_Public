@@ -8,8 +8,6 @@ public class GhostNetworkHandler : MonoBehaviour
     private Coroutine _moveRQCoroutine;
     private int _preState;
 
-    public float Speed;
-
     private Rigidbody _rb;
     private Vector3 targetPosition;
     private Quaternion targetRotation;

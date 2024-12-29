@@ -71,13 +71,30 @@ public partial class LocalPlayer : Player
     {
         base.PlayerDie(player);
 
+        VivoxManager.Instance.VoiceMute();
+
         NetworkHandler.StopMoveRequest();
         NetworkHandler.BlockInteraction();
 
         SoundManager.Instance.StopHeartBeatBgm();
 
         UIManager.Instance.OpenDieUI();
+
+        GameObject corpse = ObjectPoolManager.Instance.SpawnFromPool(EPoolObjectType.DiedPlayer);
+        corpse.transform.position = transform.position;
         gameObject.SetActive(false);
+    }
+
+    // 연결된 모든 코루틴 & 동작들 Stop 후 Disconnect
+    public void Disconnect()
+    {
+        StopRecoveryStamina();
+        StopDrainStamina();
+        StopFootStepSound();
+        StopCheckJumpCoolDown();
+        NetworkHandler.StopMoveRequest();
+        NetworkHandler.BlockInteraction();
+        GhostDetectionHandler.StopDetection();
     }
 
     #region Jump

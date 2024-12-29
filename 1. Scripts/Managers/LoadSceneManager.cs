@@ -67,17 +67,23 @@ public class LoadSceneManager : Singleton<LoadSceneManager>
             }
         }
     }
+
+
+
     public async UniTask LoadStartScene()
     {
         nextScene = startSceneName;
         SceneManager.LoadScene(loadSceneName);
-
         SoundManager.Instance.StopBgm();
         VivoxManager.Instance.LeaveAllChannel();
+        
         await OnLoadStartSceneAsync();
         await UniTask.WaitUntil(() => StartUIManager.Instance != null);
         StartUIManager.Instance.InitStartScene();
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
     }
+
     private async UniTask OnLoadStartSceneAsync()
     {
         await UniTask.Yield();

@@ -8,4 +8,5 @@ public class UI_HUD : MonoBehaviour
     public UI_RemainDay UI_RemainDay;
     public UI_SoulCredit UI_SoulCredit;
     public UI_PlayerHit UI_PlayerHit;
+    public UI_Noise UI_Noise;
 }

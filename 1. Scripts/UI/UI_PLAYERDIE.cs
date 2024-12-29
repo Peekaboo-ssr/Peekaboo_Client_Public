@@ -127,12 +127,12 @@ public class UI_PlAYERDIE : MonoBehaviour
             // 한 명이라도 남아있으면 관전 시작
             Instantiate(spectatePrefab);
 
-            // Vivox 채널 재접속
-            await VivoxManager.Instance.Leave3DVoiceChannel(NetworkManager.Instance.InviteCode);
-            await VivoxManager.Instance.JoinVoiceChannel(NetworkManager.Instance.InviteCode + "D");
+            // Vivox 채널 재접속 
+            await VivoxManager.Instance.JoinVoiceChannel(NetworkManager.Instance.GameSessionId + "D");
+            VivoxManager.Instance.VoiceOnlyDieChannel();
 
             isSpectate = true;
-            //VivoxManager.Instance.VoiceOnlyDieChannel();
+
         }
     }
     #endregion

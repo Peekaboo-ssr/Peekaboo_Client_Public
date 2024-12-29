@@ -6,6 +6,7 @@ public class NetworkManager : Singleton<NetworkManager>
 {
     [field: Header("User 정보")]
     [field: SerializeField] public string UserId { get; set; }
+    [field: SerializeField] public string Nickname { get; set; }
     [field: SerializeField] public string Token { get; set; }
 
     [field: Header("Network 정보")]

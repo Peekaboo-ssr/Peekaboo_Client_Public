@@ -5,17 +5,17 @@ using Cysharp.Threading.Tasks;
 
 public class Lobby : MonoBehaviour
 {
-    [SerializeField] Button CreateRoomBtn;
-    [SerializeField] Button JoinRoomBtn;
-    [SerializeField] TMP_InputField InviteCode;
+    [SerializeField] Button createRoomBtn;
+    [SerializeField] Button joinRoomBtn;
+    [SerializeField] TMP_InputField inviteCode;
 
     private void Awake()
     {
-        CreateRoomBtn.onClick.RemoveAllListeners();
-        JoinRoomBtn.onClick.RemoveAllListeners();
+        createRoomBtn.onClick.RemoveAllListeners();
+        joinRoomBtn.onClick.RemoveAllListeners();
 
-        CreateRoomBtn.onClick.AddListener(CreateRoomRequest);
-        JoinRoomBtn.onClick.AddListener(JoinRoomRequest);
+        createRoomBtn.onClick.AddListener(CreateRoomRequest);
+        joinRoomBtn.onClick.AddListener(JoinRoomRequest);
     }
 
     private void CreateRoomRequest()
@@ -36,14 +36,14 @@ public class Lobby : MonoBehaviour
 
     private void JoinRoomRequest()
     {
-        if (InviteCode.text.Length == 0) return;
-        NetworkManager.Instance.InviteCode = InviteCode.text;
+        if (inviteCode.text.Length == 0) return;
+        NetworkManager.Instance.InviteCode = inviteCode.text;
         GamePacket packet = new GamePacket();
-        packet.JoinRoomRequest = new C2S_JoinRoomRequest();
-        packet.JoinRoomRequest.UserId = NetworkManager.Instance.UserId;
-        packet.JoinRoomRequest.Token = NetworkManager.Instance.Token;
-        packet.JoinRoomRequest.InviteCode = InviteCode.text;
-        Debug.Log($"{InviteCode.text} 게임 서버 연결");
+        packet.JoinRoomByInviteCodeRequest = new C2S_JoinRoomByInviteCodeRequest();
+        packet.JoinRoomByInviteCodeRequest.UserId = NetworkManager.Instance.UserId;
+        packet.JoinRoomByInviteCodeRequest.Token = NetworkManager.Instance.Token;
+        packet.JoinRoomByInviteCodeRequest.InviteCode = inviteCode.text;
+        Debug.Log($"{inviteCode.text} 게임 서버 연결");
         GameServerSocketManager.Instance.Send(packet);
     }
 }

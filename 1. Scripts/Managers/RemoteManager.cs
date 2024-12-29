@@ -2,7 +2,6 @@ using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using Random = UnityEngine.Random;
 
 public class RemoteManager : Singleton<RemoteManager>
 {
@@ -12,7 +11,7 @@ public class RemoteManager : Singleton<RemoteManager>
     [SerializeField] Transform itemTrans;
     [SerializeField] List<Door> doors;
     public Dictionary<string, RemotePlayer> PlayerDictionary = new Dictionary<string, RemotePlayer>();
-    Dictionary<uint, Ghost> ghostDictionary = new Dictionary<uint, Ghost>();
+    public Dictionary<uint, Ghost> GhostDictionary = new Dictionary<uint, Ghost>();
     Dictionary<uint, Item> itemDictionary = new Dictionary<uint, Item>();
     Dictionary<uint, Door> doorDictionary = new Dictionary<uint, Door>();
 
@@ -43,6 +42,9 @@ public class RemoteManager : Singleton<RemoteManager>
         {
             remotePlayer.Value.gameObject.SetActive(true);
             remotePlayer.Value.OffSpectate();
+
+            remotePlayer.Value.Rigidbody.linearVelocity = Vector3.zero;
+            remotePlayer.Value.Rigidbody.angularVelocity = Vector3.zero;
             remotePlayer.Value.Rigidbody.MovePosition(pos);
             remotePlayer.Value.IsDie = false;
         }
@@ -73,13 +75,18 @@ public class RemoteManager : Singleton<RemoteManager>
 
     #region Player
     // CreateGameResponse
-    public void CreatePlayer(string id)
+    public void CreatePlayer(string id, string nickname)
     {
         if (PlayerDictionary.ContainsKey(id)) return;
         RemotePlayer player = Instantiate(remotePalyer, playerTrans);
+
+        player.Rigidbody.linearVelocity = Vector3.zero; 
+        player.Rigidbody.angularVelocity = Vector3.zero;
         player.Rigidbody.MovePosition(playerTrans.gameObject.transform.position);
+
         player.name = id.ToString();
         player.SetUserID(id);
+        player.SetUserNickName(nickname);
         PlayerDictionary.Add(id, player);
     }
     public void UpdateRemotePlayerMovement(string id, Position pos, Rotation rot)
@@ -148,8 +155,8 @@ public class RemoteManager : Singleton<RemoteManager>
 
 
         //ghost.Init(false, ghostId);
-        if (!ghostDictionary.ContainsKey(ghostInfo.GhostId))
-            ghostDictionary.Add(ghostInfo.GhostId, ghost);
+        if (!GhostDictionary.ContainsKey(ghostInfo.GhostId))
+            GhostDictionary.Add(ghostInfo.GhostId, ghost);
     }
     /// <summary>
     /// Host와 hostx 모두 서버와의 통신으로 ghost 생성
@@ -162,28 +169,28 @@ public class RemoteManager : Singleton<RemoteManager>
     //    Ghost ghost = Instantiate(DataManager.Instance.GhostDataDictionary[(int)type], ghostTrans);
     //    ghost.name = id.ToString();
     //    //ghost.Init(false, ghostId);
-    //    if (!ghostDictionary.ContainsKey(id))
-    //        ghostDictionary.Add(id, ghost);
+    //    if (!GhostDictionary.ContainsKey(id))
+    //        GhostDictionary.Add(id, ghost);
     //}
     public void UpdateRemoteGhostMovement(uint id, Position pos, Rotation rot)
     {
-        ghostDictionary[id].NetworkHandler.HandleMoveNotification(pos.ToVector3(), Quaternion.Euler(rot.ToVector3()));
+        GhostDictionary[id].NetworkHandler.HandleMoveNotification(pos.ToVector3(), Quaternion.Euler(rot.ToVector3()));
     }
     public void DeleteGhost(uint id)
     {
-        Ghost deleteGhost = ghostDictionary[id];
-        ghostDictionary.Remove(id);
+        Ghost deleteGhost = GhostDictionary[id];
+        GhostDictionary.Remove(id);
         Destroy(deleteGhost.gameObject);
     }
     public void UpdateGhostState(uint id, CharacterState state)
     {
         // 귀신은 Host, Remote 모두 애니메이션 실행
-        ghostDictionary[id].NetworkHandler.StateSync(state);
+        GhostDictionary[id].NetworkHandler.StateSync(state);
     }
     public void UpdateGhostSpecialState(uint id, GhostSpecialState state, bool isOn)
     {
         // 귀신은 Host, Remote 모두 특수상태 실행
-        ghostDictionary[id].NetworkHandler.SpecialStateSync(state, isOn);
+        GhostDictionary[id].NetworkHandler.SpecialStateSync(state, isOn);
     }
     #endregion
 
@@ -254,6 +261,9 @@ public class RemoteManager : Singleton<RemoteManager>
         Vector3 pos = itemInfo.Position.ToVector3();
         Item item = Instantiate(DataManager.Instance.ItemDataDictionary[typeId], itemTrans);
         item.Init(id);
+
+        item.Rigidbody.linearVelocity = Vector3.zero;
+        item.Rigidbody.angularVelocity = Vector3.zero;
         item.Rigidbody.MovePosition(pos);
         itemDictionary.Add(id, item);
     }

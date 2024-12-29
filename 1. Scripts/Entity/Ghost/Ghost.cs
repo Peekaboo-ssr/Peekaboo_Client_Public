@@ -8,7 +8,7 @@ public class Ghost : Entity
     public bool IsTest;
     #region 필수 멤버
     public GhostStateMachine StateMachine { get; protected set; }
-    public uint GhostId { get; set; }
+    public uint GhostId;
     public NavMeshAgent Agent { get; private set; }
     public GhostStatHandler StatHandler { get; private set; }
     public GhostNetworkHandler NetworkHandler { get; private set; }
@@ -28,6 +28,7 @@ public class Ghost : Entity
     public bool IsDoneAttackAnim { get; set; }
     public bool IsOpeningDoor { get; set; } 
     public bool IsReturnMove { get; set; }
+    public bool IsFirstAttack { get; set; }
     #endregion
 
     private void Start()
@@ -69,10 +70,11 @@ public class Ghost : Entity
 
         StatHandler = new GhostStatHandler();
         StatHandler.Init(GhostSO);
-        NetworkHandler.Speed = StatHandler.CurStat.Speed;
 
         if (NetworkManager.Instance.IsHost || IsTest)
         {
+            IsFirstAttack = true;
+
             Agent = GetComponent<NavMeshAgent>();
             if (Agent != null)
             {
@@ -128,7 +130,7 @@ public class Ghost : Entity
         }
         #endregion
 
-        #region Door Open
+        #region Open Door
         int doorLayer = LayerMask.NameToLayer("Door");
 
         if (StateMachine.CurrentState != StateMachine.PatrolState 
@@ -152,33 +154,6 @@ public class Ghost : Entity
             }
         }
         #endregion
-    }
-
-    private void OnCollisionEnter(Collision collision)
-    {
-        int ghostLayer = LayerMask.NameToLayer("Ghost");
-        if (collision.gameObject.layer == ghostLayer)
-        {
-            IsReturnMove = true;
-            StartCoroutine(MoveBackwardAndReturn(Agent.destination));
-        }
-    }
-
-    private IEnumerator MoveBackwardAndReturn(Vector3 originDestination)
-    {
-        // 뒤로 이동
-        Vector3 backwardPosition = transform.position - transform.forward * 1.5f;
-        Agent.SetDestination(backwardPosition);
-
-        // 에이전트가 뒤로 이동한 위치에 도달할 때까지 대기
-        while (Agent.pathPending || Agent.remainingDistance > 0.1f)
-        {
-            yield return null; // 다음 프레임까지 대기
-        }
-
-        // 기존 목표로 이동
-        Agent.SetDestination(originDestination);
-        IsReturnMove = false;
     }
 
     /// <summary>
@@ -254,10 +229,6 @@ public class Ghost : Entity
         // 공격 범위를 표시
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position, StatHandler.CurStat.AttackRange);
-
-        // 소리감지 범위 표시
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(transform.position, StatHandler.CurStat.Hearing);
     }
     protected virtual void OnDrawGizmos()
     {
@@ -271,6 +242,10 @@ public class Ghost : Entity
         // 시야 반경 그리기
         Gizmos.color = Color.green;
         Gizmos.DrawWireSphere(ghostPosition, sightRange);
+
+        // 소리감지 범위 표시
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(transform.position, StatHandler.CurStat.Hearing);
 
         // 시야각의 부채꼴
         Gizmos.color = Color.magenta;

@@ -109,3 +109,10 @@ public enum EAudioMixerType // AudioMixer와 같은 이름이어야 함
     BgmHeartBeat,
     SfxInGame,
 }
+
+public enum EPoolObjectType
+{
+    DiedPlayer,
+    DiedEffect,
+    RoomBtn,
+}

@@ -21,12 +21,12 @@ public class GhostAttackState : GhostBaseState
         _attackCooldown = _ghost.StatHandler.CurStat.AttackCool;
         if (_attackCooldown <= 0)
         {
-            PerformAttack();
-            _ghost.StateMachine.ChangeState(_ghost.StateMachine.IdleState);
+            HandleAttackSuccess();
         }
-        else
+        else if(_ghost.IsFirstAttack)
         {
-            _lastAttackTime = Time.time;
+            _ghost.IsFirstAttack = false;
+            TryAttack();
         }      
     }
 
@@ -40,13 +40,7 @@ public class GhostAttackState : GhostBaseState
         }
         else if (Time.time - _lastAttackTime >= _attackCooldown && !_isAttacking)
         {
-            if (!_ghost.Target.gameObject.activeInHierarchy)
-            {
-                _ghost.OnPlayerNotDetected();
-                _ghost.StateMachine.ChangeState(_ghost.StateMachine.PatrolState);
-            }
-            _isAttacking = true;
-            _ghost.NetworkHandler.StateChangeRequest(CharacterState.Attack);
+            TryAttack();
         }
     }
 
@@ -54,8 +48,7 @@ public class GhostAttackState : GhostBaseState
     {
         if (_ghost.IsAttackReached)
         {
-            PerformAttack();
-            _ghost.StateMachine.ChangeState(_ghost.StateMachine.IdleState);
+            HandleAttackSuccess();
         }
         else
         {
@@ -70,6 +63,31 @@ public class GhostAttackState : GhostBaseState
                 _ghost.StateMachine.ChangeState(_ghost.StateMachine.MoveState);
             }          
         }
+    }
+
+    private void TryAttack()
+    {
+        if (!_ghost.Target.gameObject.activeInHierarchy)
+        {
+            _ghost.OnPlayerNotDetected();
+            _ghost.StatHandler.ChangeWalkSpeed();
+            _ghost.Agent.speed = _ghost.StatHandler.CurStat.Speed;
+            _ghost.StateMachine.ChangeState(_ghost.StateMachine.PatrolState);
+        }
+        else
+        {
+            _isAttacking = true;
+            _ghost.NetworkHandler.StateChangeRequest(CharacterState.Attack);
+        }
+    }
+
+    private void HandleAttackSuccess()
+    {
+        PerformAttack();
+        _ghost.StatHandler.ChangeWalkSpeed();
+        _ghost.Agent.speed = _ghost.StatHandler.CurStat.Speed;
+        _ghost.IsFirstAttack = true;
+        _ghost.StateMachine.ChangeState(_ghost.StateMachine.IdleState);
     }
 
     protected virtual void PerformAttack()

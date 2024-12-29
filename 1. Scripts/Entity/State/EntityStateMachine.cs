@@ -9,9 +9,9 @@ public class EntityStateMachine
 
     public void ChangeState(IState state)
     {
-        if (Entity as GhostA != null)
+        if (Entity as Ghost != null)
         {
-            UnityEngine.Debug.Log($"Ghost{(Entity as GhostA).GhostId}의 현재 State: {state.GetType().Name}");
+            UnityEngine.Debug.Log($"Ghost{(Entity as Ghost).GhostId} 현재 State: {state.GetType().Name}");
         }
         BeforeState = CurrentState;
         CurrentState?.Exit();

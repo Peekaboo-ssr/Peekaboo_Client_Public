@@ -13,7 +13,9 @@ public class GhostMoveState : GhostBaseState
     public override void Enter()
     {
         base.Enter();
-        _ghost.NetworkHandler.StateChangeRequest(CharacterState.Move);
+        if (_ghost.StateMachine.BeforeState != _ghost.StateMachine.MoveState
+            && _ghost.StateMachine.BeforeState != _ghost.StateMachine.PatrolState)
+            _ghost.NetworkHandler.StateChangeRequest(CharacterState.Move);
 
         if (_ghost.IsOpeningDoor)
         {
@@ -36,6 +38,8 @@ public class GhostMoveState : GhostBaseState
         }
         else
         {
+            _ghost.StatHandler.ChangeRunSpeed();
+            _ghost.Agent.speed = _ghost.StatHandler.CurStat.Speed;
             if (_ghost.IsEntityInView(_ghost.TargetCollider, _sight))
             {
                 FollowPlayer(this);
@@ -52,7 +56,7 @@ public class GhostMoveState : GhostBaseState
     /// </summary>
     private void UpdateTargetOrSwitchToPatrol()
     {
-        Collider hit = _ghost.FindEntityInSight("Player", _sight);
+        Collider hit = _ghost.FindClosestEntityInSight("Player", _sight);
 
         if (hit != null) // 새로운 타겟 존재
         {

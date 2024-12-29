@@ -6,8 +6,6 @@ using Unity.Services.Vivox;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
-using System.Threading;
-using System.Linq;
 
 [Serializable]
 public class Channel3DSetting
@@ -49,25 +47,43 @@ public class VivoxManager : Singleton<VivoxManager>
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
 
         //Vivox 초기화
-        await VivoxService.Instance.InitializeAsync();
+        await VivoxService.Instance.InitializeAsync(); 
 
         VivoxService.Instance.ParticipantAddedToChannel += OnParticipantAddedToChannel;
         VivoxService.Instance.ParticipantRemovedFromChannel += OnParticipantRemovedFromChannel;
-    }
+}
 
-    private void OnParticipantAddedToChannel(VivoxParticipant participant)
+    #region Participants
+    private async void OnParticipantAddedToChannel(VivoxParticipant participant)
     {
-        participants[participant.PlayerId] = new Tuple<VivoxParticipant, Player>(participant, GameManager.Instance.Player);
+        string channelId = participant.ChannelName;
+        if (channelId != NetworkManager.Instance.GameSessionId) return; // 3D 공간 서버가 아닌 죽은자들의 서버에 Add된 경우 return
+
+        if (participant.IsSelf)
+        {
+            participants[participant.PlayerId] = new Tuple<VivoxParticipant, Player>(participant, GameManager.Instance.Player);
+            participants[participant.PlayerId].Item1.ParticipantAudioEnergyChanged += () => UIManager.Instance.UI_HUD.UI_Noise.SetNoise((float)participants[participant.PlayerId].Item1.AudioEnergy);
+        }
+        else
+        {
+            await UniTask.WaitUntil(() => RemoteManager.Instance.PlayerDictionary.ContainsKey(participant.DisplayName)); // PlayerDictionary에 Player가 등록될 때까지 대기
+            participants[participant.PlayerId] = new Tuple<VivoxParticipant, Player>(participant, RemoteManager.Instance.PlayerDictionary[participant.DisplayName]);
+        }        
     }
 
     private void OnParticipantRemovedFromChannel(VivoxParticipant participant)
     {
+        string channelId = participant.ChannelName;
+        if (channelId != NetworkManager.Instance.GameSessionId) return; // 3D 공간 서버가 아닌 죽은자들의 서버에서 Remove된 경우 return
+
         if (participants.ContainsKey(participant.PlayerId))
         {
             participants.Remove(participant.PlayerId);
         }
     }
+    #endregion
 
+    #region Login
     // Vivox 로그인
     public async UniTask LoginAsync(string userId)
     {
@@ -77,13 +93,15 @@ public class VivoxManager : Singleton<VivoxManager>
         // 고유 PlayerId 지정
         options.PlayerId = userId;
 
-        // 디스플레이 이름 설정 
+        // 디스플레이 이름 UserID로 수정
         options.DisplayName = userId;
 
         //로그인 진행
         await VivoxService.Instance.LoginAsync(options);
     }
+    #endregion
 
+    #region Died Channel
     // 일반 채널 접속 - 죽었을 때
     public async UniTask JoinVoiceChannel(string sessionId)
     {
@@ -93,19 +111,36 @@ public class VivoxManager : Singleton<VivoxManager>
             await VivoxService.Instance.JoinGroupChannelAsync(sessionId, ChatCapability.AudioOnly);
     }
 
+    public async UniTask LeaveVoiceChannel(string sessionId)
+    {
+        // 접속되어 있는 채널인 경우에만 leave
+        if (VivoxService.Instance.ActiveChannels.ContainsKey(sessionId))
+            await VivoxService.Instance.LeaveChannelAsync(sessionId);
+    }
+
+    #endregion
+
+    #region 3D Channel
     // 3D 음성 채널 접속 - 인게임
     public async UniTask Join3DChannel(GameObject speakObj)
     {
         // 접속되어 있지 않은 채널인 경우에만 Join
-        if (!VivoxService.Instance.ActiveChannels.ContainsKey(NetworkManager.Instance.InviteCode))
+        if (!VivoxService.Instance.ActiveChannels.ContainsKey(NetworkManager.Instance.GameSessionId))
             //위치 음성 채널에 접속
-            await VivoxService.Instance.JoinPositionalChannelAsync(NetworkManager.Instance.InviteCode, ChatCapability.AudioOnly, channel3DSetting.GetChannel3DProperties());
+            await VivoxService.Instance.JoinPositionalChannelAsync(NetworkManager.Instance.GameSessionId, ChatCapability.AudioOnly, channel3DSetting.GetChannel3DProperties());
 
-        //위치를 주기적으로 업데이트하는 코루틴 실행
+        StartUpdate3DPosition(speakObj);
+    }
+
+    public void StopUpdate3DPosition()
+    {
         if (update3DPositionCoroutine != null)
-        {
             StopCoroutine(update3DPositionCoroutine);
-        }
+    }
+
+    public void StartUpdate3DPosition(GameObject speakObj)
+    {
+        StopUpdate3DPosition();
         update3DPositionCoroutine = StartCoroutine(Update3DPositionCo(speakObj));
     }
 
@@ -113,8 +148,9 @@ public class VivoxManager : Singleton<VivoxManager>
     {
         while (true)
         {
-            //위치 업데이트
-            VivoxService.Instance.Set3DPosition(speakObj, NetworkManager.Instance.InviteCode);
+            if (NetworkManager.Instance == null || this == null || NetworkManager.Instance.GameSessionId == null || speakObj == null)
+                yield break;
+            VivoxService.Instance.Set3DPosition(speakObj, NetworkManager.Instance.GameSessionId);
             yield return positonUpdateRate;
         }
     }
@@ -126,13 +162,6 @@ public class VivoxManager : Singleton<VivoxManager>
             StopCoroutine(update3DPositionCoroutine);
         }
         update3DPositionCoroutine = StartCoroutine(Update3DPositionCo(speakObj));
-    }
-
-    public async UniTask LeaveVoiceChannel(string sessionId)
-    {
-        // 접속되어 있는 채널인 경우에만 leave
-        if(VivoxService.Instance.ActiveChannels.ContainsKey(sessionId))
-            await VivoxService.Instance.LeaveChannelAsync(sessionId);
     }
 
     public async UniTask Leave3DVoiceChannel(string sessionId)
@@ -149,6 +178,9 @@ public class VivoxManager : Singleton<VivoxManager>
         }
     }
 
+    #endregion
+
+    #region Voice Property
     public void LeaveAllChannel()
     {
         VivoxService.Instance.LeaveAllChannelsAsync();
@@ -161,11 +193,31 @@ public class VivoxManager : Singleton<VivoxManager>
 
     public void VoiceOnlyDieChannel()
     {
-        VivoxService.Instance.SetChannelTransmissionModeAsync(TransmissionMode.Single, NetworkManager.Instance.InviteCode + "D");
+        try
+        {
+             VivoxService.Instance.SetChannelTransmissionModeAsync(TransmissionMode.Single, NetworkManager.Instance.GameSessionId + "D");
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Error: {ex.Message}. Die 단일 채널에 Voice 전송이 이루어지지 않습니다.");
+        }
     }
 
     public void VoiceOnly3DChannel()
     {
-        VivoxService.Instance.SetChannelTransmissionModeAsync(TransmissionMode.Single, NetworkManager.Instance.InviteCode);
+        try
+        {
+             VivoxService.Instance.SetChannelTransmissionModeAsync(TransmissionMode.Single, NetworkManager.Instance.GameSessionId);
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError($"Error: {ex.Message}. 3D 단일 채널에 Voice 전송이 이루어지지 않습니다.");
+        }
     }
+
+    public void VoiceMute()
+    {
+        VivoxService.Instance.SetChannelTransmissionModeAsync(TransmissionMode.None);
+    }
+    #endregion 
 }

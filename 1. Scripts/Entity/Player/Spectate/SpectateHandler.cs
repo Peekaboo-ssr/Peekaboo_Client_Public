@@ -43,10 +43,10 @@ public class SpectateHandler : MonoBehaviour
             if (remotePlayer != null)
                 remotePlayer.OnSpectate();
 
-            UIManager.Instance.UI_SPECTATE.UpdatePlayerId(playerIDs[selectedIdx]);
+            UIManager.Instance.UI_SPECTATE.UpdatePlayerNickName(spectateRemotePlayers[playerIDs[selectedIdx]].UserNickName);
 
             //현재 관전중인 플레이어 Obj 기준으로 3D 채널 다시 코루틴 실행
-            //VivoxManager.Instance.Update3DChannelObj(spectateRemotePlayers[playerIDs[selectedIdx]].gameObject);
+            VivoxManager.Instance.Update3DChannelObj(spectateRemotePlayers[playerIDs[selectedIdx]].gameObject);
         }
     }
 
@@ -128,7 +128,7 @@ public class SpectateHandler : MonoBehaviour
 
     public void StopSpectate()
     {
-        UIManager.Instance.UI_SPECTATE.UpdatePlayerId("");
+        UIManager.Instance.UI_SPECTATE.UpdatePlayerNickName("");
 
         OffAllSpectate();
         if (gameObject != null)

@@ -14,7 +14,9 @@ public class GhostPatrolState : GhostBaseState
     public override void Enter()
     {
         base.Enter();
-        _ghost.NetworkHandler.StateChangeRequest(CharacterState.Move);
+        if (_ghost.StateMachine.BeforeState != _ghost.StateMachine.MoveState
+            && _ghost.StateMachine.BeforeState != _ghost.StateMachine.PatrolState)
+            _ghost.NetworkHandler.StateChangeRequest(CharacterState.Move);         
 
         if (_ghost.IsOpeningDoor)
         {

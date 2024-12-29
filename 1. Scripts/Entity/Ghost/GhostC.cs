@@ -6,10 +6,9 @@ using UnityEngine.Events;
 
 public class GhostC : Ghost
 {
-    public bool IsSeePlayer;
-
     private WaitForSeconds checkDistanceTime = new WaitForSeconds(0.1f);
     private UnityAction OnDistanceTarget;
+    private bool IsPlayerLookAtMe;
     public override void Init(uint ghostId, bool isFail)
     {
         base.Init(ghostId, isFail);
@@ -21,8 +20,7 @@ public class GhostC : Ghost
                 StateMachine = new GhostCStateMachine(this);
                 StateMachine.ChangeState(StateMachine.PatrolState);
                 IsDefeatable = false;
-
-                IsSeePlayer = false;
+                IsPlayerLookAtMe = false;
 
                 EventHandler.OnSeeEvent += SeeGhostRequest;
                 EventHandler.OnNotSeeEvent += NotSeeGhostRequest;
@@ -39,18 +37,27 @@ public class GhostC : Ghost
     #region 귀신 처다보기 처리
     private void SeeGhostRequest(Player player)
     {
-        if (Target == player)
+        if (Target == null)
         {
-            IsSeePlayer = true;
+            IsPlayerLookAtMe = true;
+            IsPlayerInRange = false;
+            TargetCollider = player.GetComponent<Collider>();
+            Target = player;
+            StateMachine.ChangeState(StateMachine.MoveState);
+            GameServerSocketManager.Instance.Send(CreateSeePacket(true));
+        }
+        else if (Target == player && !IsPlayerLookAtMe)
+        {
+            IsPlayerLookAtMe = true;
             GameServerSocketManager.Instance.Send(CreateSeePacket(true));
         }
     }
 
     private void NotSeeGhostRequest(Player player)
     {
-        if (Target == player)
+        if (Target == player && IsPlayerLookAtMe)
         {
-            IsSeePlayer = false;
+            IsPlayerLookAtMe = false;
             GameServerSocketManager.Instance.Send(CreateSeePacket(false));
         }
     }

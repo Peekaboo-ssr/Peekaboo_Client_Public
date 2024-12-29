@@ -10,6 +10,7 @@ public class LocalPlayerNetworkHandler : MonoBehaviour
     #region Move Request
     public void SendMoveRequest()
     {
+        if (this == null) return;
         if (moveRQCoroutine != null)
             StopCoroutine(moveRQCoroutine);
         moveRQCoroutine = StartCoroutine(SendMoveRequestCorutine());
@@ -18,12 +19,15 @@ public class LocalPlayerNetworkHandler : MonoBehaviour
     public void StopMoveRequest()
     {
         if (moveRQCoroutine != null)
+        {
             StopCoroutine(moveRQCoroutine);
+        }
+            
     }
 
     private IEnumerator SendMoveRequestCorutine()
     {
-        new WaitUntil(() => GameManager.Instance.Player != null);
+        yield return new WaitUntil(() => GameManager.Instance.Player != null);
         while (true)
         {
             MoveRequest(GameManager.Instance.Player.transform.position, GameManager.Instance.Player.transform.rotation);

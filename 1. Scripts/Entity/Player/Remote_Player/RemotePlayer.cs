@@ -4,6 +4,7 @@ public class RemotePlayer : Player
 {
     public RemotePlayerNetworkHandler NetworkHandler { get; private set; }
     public RemotePlayerMovement Movement {  get; private set; }
+    public RemotePlayerNicknameHandler NicknameHandler { get; private set; }
 
     [SerializeField] private GameObject playerSight;
     [SerializeField] private Camera remoteCamera;
@@ -16,9 +17,16 @@ public class RemotePlayer : Player
         base.Awake();
         NetworkHandler = GetComponent<RemotePlayerNetworkHandler>();
         Movement = GetComponent<RemotePlayerMovement>();
+        NicknameHandler = GetComponentInChildren<RemotePlayerNicknameHandler>();
         audioListener = GetComponentInChildren<AudioListener>();
 
         RemotePlayerInit();
+    }
+
+    protected override void Start()
+    {
+        base.Start();
+        NicknameHandler.Init(UserNickName);
     }
 
     public void RemotePlayerInit()

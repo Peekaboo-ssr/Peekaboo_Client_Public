@@ -8,6 +8,7 @@ public class GameServerSocketManager : TCPSocketManagerBase<GameServerSocketMana
     [field: SerializeField] public bool IsResponse { get; set; } = false;
     [field: SerializeField] public bool IsLoginSuccess { get; set; } = false;
     [field: SerializeField] public bool LoginInProgress { get; set; } = false;
+    [field: SerializeField] public bool SignupSuccess { get; set; } = false;
     #endregion
 
     [Header("InGame")]
@@ -15,35 +16,49 @@ public class GameServerSocketManager : TCPSocketManagerBase<GameServerSocketMana
     public bool IsRoomReady = false;
     public event Action OnMainSceneLoad;
     public event Action OnGameStart;
-
     private void Start()
     {
-        Init(ip, port);
+        ConnectGameServer();
     }
-
     public void ConnectGameServer()
     {
         IsInStage = false;
         ip = NetworkManager.Instance.GameServerIP;
         port = 6000;
+        Init(ip, port);
         Connect();
     }
     public void CallMainSceneLoad()
     {
         OnMainSceneLoad?.Invoke();
     }
+    private void OnApplicationQuit()
+    {
+        if (this == null) return;
+        Disconnect();
+    }
+    // 아예 게임을 끄는 경우
     public override void Disconnect(bool isReconnect = false)
     {
-        base.Disconnect(false);
         VivoxManager.Instance.VivoxDisconnect();
+        VivoxManager.Instance.StopUpdate3DPosition();
+        GameManager.Instance.Player.Disconnect();
+
         IsInStage = false;
         IsRoomReady = false;
+        OnMainSceneLoad = null;
+        OnGameStart = null;
+
+        base.Disconnect(false);
+    }
+    public void EventInit()
+    {
         OnMainSceneLoad = null;
         OnGameStart = null;
     }
 
     #region Gateway_Response
-    public void LoginResponse(GamePacket gamePacket)
+    public async void LoginResponse(GamePacket gamePacket)
     {
         if (!LoginInProgress) return;
         var response = gamePacket.LoginResponse;
@@ -55,8 +70,38 @@ public class GameServerSocketManager : TCPSocketManagerBase<GameServerSocketMana
             IsLoginSuccess = true;
             NetworkManager.Instance.Token = response.Token;
             NetworkManager.Instance.UserId = response.UserId;
+            NetworkManager.Instance.Nickname = response.Nickname;
+            await VivoxManager.Instance.LoginAsync(NetworkManager.Instance.UserId);
+            Debug.Log("LoginProcess : VivoxLogin...");
         }
         LoginInProgress = false;
+    }
+    public void RegistAccountResponse(GamePacket gamePacket)
+    {
+        var response = gamePacket.RegistAccountResponse;
+        SignupSuccess = true;
+    }
+    public void ChangeNicknameResponse(GamePacket gamePacket) 
+    {
+        var response = gamePacket.ChangeNicknameResponse;
+        NetworkManager.Instance.Nickname = response.Nickname;
+        StartUIManager.Instance.ChangeNickname(response.Nickname);
+    }
+    public void EnterLobbyResponse(GamePacket gamePacket)
+    {
+        var response = gamePacket.EnterLobbyResponse;
+        StartUIManager.Instance.OpenLobbyPage();
+    }
+    public void WaitingRoomListResponse(GamePacket gamePacket)
+    {
+        var response = gamePacket.WaitingRoomListResponse;
+        StartUIManager.Instance.WaitingRoom.InitList();
+        foreach (var room in response.RoomInfos)
+        {
+            // room 만들기
+            // gameSessionId, roomName, numberOfPlayer, latency
+            StartUIManager.Instance.WaitingRoom.CreateRoom(room.GameSessionId, room.RoomName, (int)room.NumberOfPlayer, (int)room.Latency);
+        }
     }
     #endregion
 
@@ -96,24 +141,26 @@ public class GameServerSocketManager : TCPSocketManagerBase<GameServerSocketMana
         }
         NetworkManager.Instance.GameSessionId = response.GameSessionId;
         IsRoomReady = true;
+        UniTask task = LoadMainSceneTask(response);
+    }
 
-        UniTask task = LoadSceneManager.Instance.LoadMainScene(() =>
+    private UniTask LoadMainSceneTask(S2C_JoinRoomResponse response)
+    {
+        return LoadSceneManager.Instance.LoadMainScene(() =>
         {
             CallMainSceneLoad();
             UIManager.Instance.UI_HUD.UI_RemainDay.InitDayText();
             foreach (var user in response.PlayerInfos)
             {
                 if (user.UserId == NetworkManager.Instance.UserId) continue;
-                RemoteManager.Instance.CreatePlayer(user.UserId);
+                RemoteManager.Instance.CreatePlayer(user.UserId, user.Nickname);
             }
-            // 모든 작업이 완료됐다 라는 Request 전달
-            //GamePacket packet = new GamePacket();
-            
         });
     }
+
     public void DisconnectRoomResponse(GamePacket gamePacket)
     {
-        UniTask task = LoadSceneManager.Instance.LoadStartScene();
+        
     }
 
     /// <summary>
@@ -290,7 +337,7 @@ public class GameServerSocketManager : TCPSocketManagerBase<GameServerSocketMana
     public void JoinRoomNotification(GamePacket gamePacket) 
     {
         var response = gamePacket.JoinRoomNotification;
-        RemoteManager.Instance.CreatePlayer(response.UserId);
+        RemoteManager.Instance.CreatePlayer(response.UserId, response.Nickname);
     }
     public async UniTask WaitInstanceLoad(Action onComplete = null)
     {
@@ -329,6 +376,7 @@ public class GameServerSocketManager : TCPSocketManagerBase<GameServerSocketMana
     public void KickRoomNotification(GamePacket gamePacket)
     {
         var response = gamePacket.KickRoomNotification;
+        GameManager.Instance.Player.Disconnect();
         UniTask task = LoadSceneManager.Instance.LoadStartScene();
     }
     public void RemainingTimeNotification(GamePacket gamePacket)
@@ -342,7 +390,7 @@ public class GameServerSocketManager : TCPSocketManagerBase<GameServerSocketMana
         // current SoulCredit
         RemoteManager.Instance.isFailSesstion = false;
         IsInStage = false;
-        GameManager.Instance.CallNextDay(response.StartPosition.ToVector3(), response.RemainingDay, response.DiedCount, response.AliveCount);
+        GameManager.Instance.CallNextDay(response.StartPosition.ToVector3(), response.PenaltyCredit, response.RemainingDay, response.DiedCount, response.AliveCount);
         UIManager.Instance.UI_HUD.UI_SoulCredit.UpdateCreditText((int)response.SoulCredit);
     }
     public void SubmissionEndNotification(GamePacket gamePacket)

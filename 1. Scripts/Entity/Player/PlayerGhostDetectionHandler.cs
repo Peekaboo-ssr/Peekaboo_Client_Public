@@ -1,9 +1,9 @@
 using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
+
 public class PlayerGhostDetectionHandler : MonoBehaviour
 {
-    private Player player;
-    [SerializeField] private Ghost curGhost;
     [SerializeField] private Ghost curInRangeGhost;
     private Coroutine ghostDetectionCoroutine;
     private WaitForSeconds detectionWaitForSeconds;
@@ -13,7 +13,17 @@ public class PlayerGhostDetectionHandler : MonoBehaviour
     private float minSeeGhostSoundTime; // 귀신을 보았을 때 사운드의 최소 실행 시간
     private bool nowPlayingGhostBgm;
 
+    private Player player;
     private LocalPlayer localPlayer;
+    private Dictionary<uint, (bool, Ghost)> ghostDictionary = new Dictionary<uint,(bool, Ghost)>(); // 보고있는 Ghost면 True
+    private HashSet<Ghost> nowSeenGhosts = new HashSet<Ghost>();
+    private List<uint> keys;
+
+    private void Start()
+    {
+        // 게임이 시작될 때 GhostDetection 시작
+        GameServerSocketManager.Instance.OnGameStart += StartDetection;
+    }
 
     public void Init(Player player)
     {
@@ -23,14 +33,19 @@ public class PlayerGhostDetectionHandler : MonoBehaviour
         localPlayer = player as LocalPlayer;
     }
 
-    private void Start()
+    private void InitGhost()
     {
-        // 게임이 시작될 때 GhostDetection 시작
-        GameServerSocketManager.Instance.OnGameStart += StartDetection;
+        ghostDictionary.Clear();
+        foreach (var ghost in RemoteManager.Instance.GhostDictionary)
+        {
+            ghostDictionary[ghost.Key] = new(false, ghost.Value);
+        }
+        keys = new List<uint>(ghostDictionary.Keys);
     }
 
     public void StartDetection()
     {
+        InitGhost();
         StopDetection();
         ghostDetectionCoroutine = StartCoroutine(DetectGhost());
     }
@@ -46,65 +61,96 @@ public class PlayerGhostDetectionHandler : MonoBehaviour
     private IEnumerator DetectGhost()
     {
         while (true)
-        {           
-            if (IsDiePlayer())  yield break; // 플레이어가 죽었을 경우 코루틴 break
-            Collider hit = player.FindEntityInSight("Ghost", player.PlayerSO.Sight);
+        {
+            if (IsDiePlayer()) yield break;
 
-            if(hit != null ) // Ghost를 보고있을 때
+            List<Collider> hitList = player.FindEntitiesInSight("Ghost", player.PlayerSO.Sight);
+
+            if (hitList != null && hitList.Count > 0) // 보고있는 Ghost가 있을 때
             {
-                if(curGhost == null) // 최근에 본 Ghost가 없다면, Ghost를 보는 처리를 해준다
-                { 
-                    curGhost = hit.GetComponent<Ghost>();
-                    SeeGhost(player);                   
-                    
-                    if (curInRangeGhost == null || hit.gameObject != curInRangeGhost.gameObject)
-                        curInRangeGhost = hit.GetComponent<Ghost>();
-                    lastSeeGhostTime = Time.time;
-
-                    PlaySeeGhostSound();
-                }
-                else if(curGhost != null && hit.gameObject != curGhost.gameObject) // 최근에 본 고스트가 있는데, 지금 보이는 고스트와 다를 때
+                #region 새롭게 보는 Ghost Dic
+                nowSeenGhosts.Clear();
+                foreach (var hit in hitList)
                 {
-                    NotSeeGhost(); // 보던 Ghost NotSee처리
-                    curGhost = hit.GetComponent<Ghost>();
-                    SeeGhost(player); // 새로 보게 된 Ghost See 처리
+                    if (hit == null) 
+                        continue;
 
+                    Ghost ghost = hit.GetComponent<Ghost>();
+                    if (ghost == null) 
+                        continue;
+
+                    // 현재 보고있는 Ghost 리스트에 추가
+                    nowSeenGhosts.Add(ghost);
+
+                    if (!ghostDictionary[ghost.GhostId].Item1)
+                    {
+                        ghostDictionary[ghost.GhostId] = (true, ghostDictionary[ghost.GhostId].Item2);
+                        SeeGhost(player, ghostDictionary[ghost.GhostId].Item2.GhostId);
+                        PlaySeeGhostSound(ghost.GhostId);
+                    }
+                       
+                    // Sound
                     if (curInRangeGhost == null || hit.gameObject != curInRangeGhost.gameObject)
-                        curInRangeGhost = hit.GetComponent<Ghost>();
+                        curInRangeGhost = ghost;
                     lastSeeGhostTime = Time.time;
-
-                    PlaySeeGhostSound();
                 }
+                #endregion
+
+                #region 안보고 있는 Ghost 처리
+
+                for (int i = 0; i < keys.Count; i++)
+                {
+                    var ghost = ghostDictionary[keys[i]];
+
+                    if (!nowSeenGhosts.Contains(ghost.Item2) && ghost.Item1)
+                    {
+                        ghostDictionary[keys[i]] = (false, ghost.Item2);
+                        NotSeeGhost(ghost.Item2.GhostId);
+                    }                        
+                }
+                #endregion
             }
-            else // hit이 Ghost가 아닐 때 NotSeeGhost
+            else // 보고있는 Ghost가 아예 없을 때
             {
-                NotSeeGhost();
+                NotSeeAllGhost();
                 PlayNotSeeGhostSound();
             }
+
             yield return detectionWaitForSeconds;
         }
     }
 
-    private void SeeGhost(Player player)
+    private void SeeGhost(Player player, uint ghostId)
     {
-        if (curGhost != null && curGhost.EventHandler != null)
+        var curGhost = ghostDictionary[ghostId];
+
+        if (curGhost.Item2 != null && curGhost.Item2.EventHandler != null && NetworkManager.Instance.IsHost)
         {
-            if (NetworkManager.Instance.IsHost)
-            {
-                curGhost.EventHandler.SeeGhost(player);
-            }
+            curGhost.Item2.EventHandler.SeeGhost(player);
+        } 
+    }
+
+    private void NotSeeGhost(uint ghostId)
+    {
+        var curGhost = ghostDictionary[ghostId];
+
+        if (curGhost.Item2 != null && curGhost.Item2.EventHandler != null && NetworkManager.Instance.IsHost)
+        {
+            curGhost.Item2.EventHandler.NotSeeGhost(player);
         }
     }
 
-    private void NotSeeGhost()
+    private void NotSeeAllGhost()
     {
-        if (curGhost != null && curGhost.EventHandler != null)
+        for (int i = 0; i < keys.Count; i++)
         {
-            if (NetworkManager.Instance.IsHost)
+            var ghost = ghostDictionary[keys[i]];
+
+            if (ghost.Item1 && ghost.Item2 != null && ghost.Item2.EventHandler != null && NetworkManager.Instance.IsHost)
             {
-                curGhost.EventHandler.NotSeeGhost(player);
+                ghostDictionary[keys[i]] = (false, ghost.Item2);
+                ghost.Item2.EventHandler.NotSeeGhost(player);
             }
-            curGhost = null;
         }
     }
 
@@ -112,7 +158,7 @@ public class PlayerGhostDetectionHandler : MonoBehaviour
     {
         if (!player.gameObject.activeInHierarchy || player == null)
         {
-            NotSeeGhost();
+            NotSeeAllGhost();
             return true;
         }
         return false;
@@ -128,13 +174,15 @@ public class PlayerGhostDetectionHandler : MonoBehaviour
         return distance < ghostSight * ghostSight;
     }
 
-    private void PlaySeeGhostSound()
+    private void PlaySeeGhostSound(uint ghostId)
     {
-        // 사운드 실행 중이지 않고, Local Player이며 curGhost가 null이 아닐 때 
-        if (!nowPlayingGhostBgm && localPlayer != null && curGhost != null)
-        {
-            curGhost.PlayAppearSound(curGhost.GhostType);
+        var curGhost = ghostDictionary[ghostId];
+        if(curGhost.Item2 != null)
+            curGhost.Item2.PlayAppearSound(curGhost.Item2.GhostType);
 
+        // 사운드 실행 중이지 않고, Local Player일 때 Main Bgm 틀기
+        if (!nowPlayingGhostBgm && localPlayer != null)
+        {
             SoundManager.Instance.PlayBgm(EBgm.SeeGhost);
             SoundManager.Instance.PlayHeartBeatBgm(EHeartBeatBgm.HeartBeat);
             nowPlayingGhostBgm = true;

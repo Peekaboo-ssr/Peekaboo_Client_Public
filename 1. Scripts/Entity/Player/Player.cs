@@ -11,6 +11,7 @@ public partial class Player : Entity
     public Rigidbody Rigidbody { get; private set; }
     [field: SerializeField] public Transform CameraTransform { get; private set; }
     public string UserID {  get; private set; }
+    public string UserNickName { get; private set; }
 
     protected override void Awake()
     {
@@ -31,6 +32,11 @@ public partial class Player : Entity
     public void SetUserID(string userId)
     {
         UserID = userId;
+    }
+
+    public void SetUserNickName(string nickName)
+    {
+        UserNickName = nickName;
     }
 
     protected virtual void PlayerDie(Player player)

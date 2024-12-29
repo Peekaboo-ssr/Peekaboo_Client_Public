@@ -38,6 +38,9 @@ public class PlayerItemHoldHandler : MonoBehaviour
 
             obj.gameObject.SetActive(true);
             obj.transform.SetParent(null, true);
+
+            obj.Rigidbody.linearVelocity = Vector3.zero;
+            obj.Rigidbody.angularVelocity = Vector3.zero;
             obj.Rigidbody.MovePosition(dropPosition.position);
         }
     }

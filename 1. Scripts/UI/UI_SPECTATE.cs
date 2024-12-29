@@ -3,10 +3,10 @@ using UnityEngine;
 
 public class UI_SPECTATE : MonoBehaviour
 {
-    [SerializeField] private TextMeshProUGUI txt_PlayerId;
+    [SerializeField] private TextMeshProUGUI txt_PlayerNickName;
 
-    public void UpdatePlayerId(string id)
+    public void UpdatePlayerNickName(string nickName)
     {
-        txt_PlayerId.text = id;
+        txt_PlayerNickName.text = nickName;
     }
 }

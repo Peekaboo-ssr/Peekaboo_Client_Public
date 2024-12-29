@@ -7,28 +7,28 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
     [System.Serializable]
     public class Pool
     {
-        public string code;
-        public MonoBehaviour prefab;
-        public int size;  // ÃÊ±â Ç® Å©±â
+        public EPoolObjectType type;
+        public GameObject prefab;
+        public int size;
     }
 
     public List<Pool> pools;
-    private Dictionary<string, ObjectPool<MonoBehaviour>> poolDic;
+    private Dictionary<int, ObjectPool<GameObject>> poolDictionary;
 
-    // ºÎ¸ğ ¿ÀºêÁ§Æ®
-    public Transform ghostsParent;
-    public Transform itemsParent;
+    // ë¶€ëª¨ ì˜¤ë¸Œì íŠ¸
+    public Transform DiedPlayerPoolTransform;
+    public Transform EffectTransform;
 
     protected override void Awake()
     {
         base.Awake();
-        poolDic = new Dictionary<string, ObjectPool<MonoBehaviour>>();
+        poolDictionary = new Dictionary<int, ObjectPool<GameObject>>();
 
         foreach (var pool in pools)
         {
-            var newPool = new ObjectPool<MonoBehaviour>(
+            var newPool = new ObjectPool<GameObject>(
                 createFunc: () => {
-                    MonoBehaviour obj = Instantiate(pool.prefab);
+                    GameObject obj = Instantiate(pool.prefab);
                     obj.gameObject.SetActive(false);
                     return obj;
                 },
@@ -39,53 +39,69 @@ public class ObjectPoolManager : Singleton<ObjectPoolManager>
                     obj.gameObject.SetActive(false);
                 },
                 actionOnDestroy: (obj) => Destroy(obj),
-                collectionCheck: false,  // µ¿ÀÏ ¿ÀºêÁ§Æ® Áßº¹ ¹æÁö Ã¼Å© ºñÈ°¼ºÈ­
-                defaultCapacity: pool.size,  // ÃÊ±â Ç® Å©±â ¼³Á¤
-                maxSize: pool.size  // ÃÖ´ë Ç® Å©±â ¼³Á¤
+                collectionCheck: false,  // ë™ì¼ ì˜¤ë¸Œì íŠ¸ ì¤‘ë³µ ë°©ì§€ ì²´í¬ ë¹„í™œì„±í™”
+                defaultCapacity: pool.size,  // ì´ˆê¸° í’€ í¬ê¸° ì„¤ì •
+                maxSize: pool.size  // ìµœëŒ€ í’€ í¬ê¸° ì„¤ì •
             );
 
-            poolDic.Add(pool.code, newPool);
+            poolDictionary.Add((int)pool.type, newPool);
         }
     }
 
-    public MonoBehaviour SpawnFromPool(string code, Vector2 position, Quaternion rotation)
+    public GameObject SpawnFromPool(EPoolObjectType type)
     {
-        if (!poolDic.ContainsKey(code))
+        if (!poolDictionary.ContainsKey((int)type))
         {
-            Debug.LogWarning($"'{code}'¿¡ ÇØ´çÇÏ´Â Ç®ÀÌ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù.");
+            Debug.LogWarning($"'{type}'ì— í•´ë‹¹í•˜ëŠ” í’€ì´ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
             return null;
         }
 
-        MonoBehaviour objectToSpawn = poolDic[code].Get();
+        GameObject objectToSpawn = poolDictionary[(int)type].Get();
 
-        objectToSpawn.transform.position = position;
-        objectToSpawn.transform.rotation = rotation;
-
-        // ÀÌ¸§À» ±âÁØÀ¸·Î ºÎ¸ğ ¼³Á¤
-        if (objectToSpawn.name.Contains("GST"))
+        switch (type)
         {
-            objectToSpawn.transform.SetParent(ghostsParent);
+            default:
+                objectToSpawn.transform.SetParent(transform); // ê¸°ë³¸ ë¶€ëª¨ë¡œ ì„¤ì •
+                break;
+            case EPoolObjectType.DiedPlayer:
+                objectToSpawn.transform.SetParent(DiedPlayerPoolTransform);
+                break;
+            case EPoolObjectType.DiedEffect:
+                objectToSpawn.transform.SetParent(EffectTransform);
+                break;
         }
-        else if (objectToSpawn.name.Contains("ITM"))
-        {
-            objectToSpawn.transform.SetParent(itemsParent);
-        }
-        else
-        {
-            objectToSpawn.transform.SetParent(transform); // ±âº» ºÎ¸ğ·Î ¼³Á¤
-        }
-
         return objectToSpawn;
     }
 
-    public void ReturnToPool(string code, MonoBehaviour obj)
+    public void ReturnToPool(EPoolObjectType type, GameObject obj)
     {
-        if (!poolDic.ContainsKey(code))
+        if (!poolDictionary.ContainsKey((int)type))
         {
-            Debug.LogWarning($"'{code}'¿¡ ÇØ´çÇÏ´Â Ç®ÀÌ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù.");
+            Debug.LogWarning($"'{type}'ì— í•´ë‹¹í•˜ëŠ” í’€ì´ ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
             return;
         }
+        poolDictionary[(int)type].Release(obj);
+    }
 
-        poolDic[tag].Release(obj);
+    public void ResetDiedPlayer()
+    {
+        // Died Player ë„ê¸°
+        for (int i = 0; i < DiedPlayerPoolTransform.childCount; ++i)
+        {
+            Transform child = DiedPlayerPoolTransform.GetChild(i);
+            if (child != null)
+            {
+                child.gameObject.SetActive(false); 
+            }
+        }
+        // Died Effect ë„ê¸°
+        for (int i = 0; i < EffectTransform.childCount; ++i)
+        {
+            Transform child = EffectTransform.GetChild(i);
+            if (child != null)
+            {
+                child.gameObject.SetActive(false);
+            }
+        }
     }
 }

@@ -29,6 +29,7 @@ public class RemotePlayerNetworkHandler : MonoBehaviour
     // 이동 동기화 메서드
     public void MovementSync(Vector3 position, Vector3 rotation)
     {
+        if (player == null || !player.gameObject.activeInHierarchy) return;
         player.EventHandler.CallMoveEvent(position);
         player.EventHandler.CallLookEvent(rotation);
         //Debug.Log($"Rotation {rotation}");
