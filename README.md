@@ -26,7 +26,7 @@
  
  `Members` **박현호 정은지 성지윤**
 
- `Stack` **Unity, C#**   
+ `Stack` **Unity 6, C#**   
 
  `Develop`  **2024.11 ~ 2024.12**   
 
