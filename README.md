@@ -14,11 +14,11 @@
 <a href="https://github.com/LuBly">
   <img src="https://github.com/LuBly.png" width="150">
 </a>
-<a href="https://github.com/ss-zun">
-  <img src="https://github.com/ss-zun.png" width="150">
-</a>
 <a href="https://github.com/JeongEunJi1127">
   <img src="https://github.com/JeongEunJi1127.png" width="150">
+</a>
+<a href="https://github.com/ss-zun">
+  <img src="https://github.com/ss-zun.png" width="150">
 </a>
 </p>
 
